@@ -28,6 +28,100 @@ const defaultTasks = [
   },
 ]
 
+function MyCatAvatar({
+  catName,
+  action,
+  fullness,
+  cleanliness,
+  intimacy,
+  completedTasks,
+  totalTasks,
+  onPet,
+}) {
+  const imageUrl = `${import.meta.env.BASE_URL}cats/mycat.png`
+
+  const actionText = {
+    idle: `我是 ${catName}，今天也会陪着你喵～`,
+    happy: `${catName} 很开心！尾巴都要摇起来啦～`,
+    sip: `${catName} 正在喝小鱼干奶茶，满足喵～`,
+    play: `${catName} 正在玩逗猫棒，超兴奋！`,
+    sleep: `${catName} 有点困了，正在软软睡觉～`,
+    focus: `${catName} 陪你一起专注学习中。`,
+  }
+
+  const mood =
+    fullness >= 85 && intimacy >= 80
+      ? '心情很好'
+      : fullness < 50
+        ? '有点饿'
+        : cleanliness < 50
+          ? '想梳毛'
+          : '安静陪伴'
+
+  return (
+    <section className={`my-cat-scene ${action}`}>
+      <div className="cat-dialog">
+        <div className="cat-dialog-title">🐱 {catName}</div>
+        <p>{actionText[action] || actionText.idle}</p>
+      </div>
+
+      <div className="cat-badges">
+        <span>状态：{mood}</span>
+        <span>任务：{completedTasks}/{totalTasks}</span>
+      </div>
+
+      <button className="cat-click-area" onClick={onPet} aria-label="摸摸猫咪">
+        <div className="cat-aura"></div>
+
+        <img
+          className="my-cat-img"
+          src={imageUrl}
+          alt={`${catName} 的 3D 小猫形象`}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+
+        <div className="cat-shadow"></div>
+
+        <span className="cat-sparkle sparkle-a">✦</span>
+        <span className="cat-sparkle sparkle-b">✧</span>
+        <span className="cat-sparkle sparkle-c">✦</span>
+
+        {action === 'sleep' && (
+          <div className="sleep-bubbles">
+            <span>Z</span>
+            <span>z</span>
+            <span>z</span>
+          </div>
+        )}
+
+        {action === 'play' && (
+          <div className="toy-stick">
+            <span>🪶</span>
+          </div>
+        )}
+
+        {action === 'focus' && (
+          <div className="focus-note">
+            <span>专注中</span>
+          </div>
+        )}
+
+        {action === 'sip' && (
+          <div className="sip-note">
+            <span>+ 饱食度</span>
+          </div>
+        )}
+      </button>
+
+      <div className="cat-mini-actions">
+        <span>点击猫咪可以摸摸它</span>
+      </div>
+    </section>
+  )
+}
+
 function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('miao_tasks')
@@ -44,11 +138,28 @@ function App() {
     return saved ? Number(saved) : 75
   })
 
-  const [cleanliness, setCleanliness] = useState(80)
-  const [intimacy, setIntimacy] = useState(85)
+  const [cleanliness, setCleanliness] = useState(() => {
+    const saved = localStorage.getItem('miao_cleanliness')
+    return saved ? Number(saved) : 80
+  })
 
+  const [intimacy, setIntimacy] = useState(() => {
+    const saved = localStorage.getItem('miao_intimacy')
+    return saved ? Number(saved) : 85
+  })
+
+  const [catName, setCatName] = useState(() => {
+    const saved = localStorage.getItem('miao_cat_name')
+    return saved || '奶糖'
+  })
+
+  const [catAction, setCatAction] = useState('idle')
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('30')
+
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter((task) => task.status === '已完成').length
+  const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
 
   useEffect(() => {
     localStorage.setItem('miao_tasks', JSON.stringify(tasks))
@@ -62,9 +173,26 @@ function App() {
     localStorage.setItem('miao_fullness', String(fullness))
   }, [fullness])
 
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter((task) => task.status === '已完成').length
-  const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
+  useEffect(() => {
+    localStorage.setItem('miao_cleanliness', String(cleanliness))
+  }, [cleanliness])
+
+  useEffect(() => {
+    localStorage.setItem('miao_intimacy', String(intimacy))
+  }, [intimacy])
+
+  useEffect(() => {
+    localStorage.setItem('miao_cat_name', catName)
+  }, [catName])
+
+  function playCatAction(actionName, duration = 1300) {
+    setCatAction(actionName)
+
+    window.clearTimeout(window.__miaoTimer)
+    window.__miaoTimer = window.setTimeout(() => {
+      setCatAction('idle')
+    }, duration)
+  }
 
   function addTask() {
     if (!newTaskName.trim()) {
@@ -87,6 +215,7 @@ function App() {
     setTasks([newTask, ...tasks])
     setNewTaskName('')
     setNewTaskTime('30')
+    playCatAction('happy')
   }
 
   function completeTask(id) {
@@ -94,7 +223,9 @@ function App() {
       tasks.map((task) => {
         if (task.id === id && task.status !== '已完成') {
           setFish((prev) => prev + task.reward)
-          setIntimacy((prev) => Math.min(100, prev + 3))
+          setIntimacy((prev) => Math.min(100, prev + 4))
+          playCatAction('happy')
+
           return {
             ...task,
             status: '已完成',
@@ -114,6 +245,8 @@ function App() {
           : task
       )
     )
+
+    playCatAction('focus', 1800)
   }
 
   function deleteTask(id) {
@@ -126,13 +259,32 @@ function App() {
       return
     }
 
-    setFish(fish - 10)
-    setFullness((prev) => Math.min(100, prev + 10))
+    setFish((prev) => prev - 10)
+    setFullness((prev) => Math.min(100, prev + 12))
+    setIntimacy((prev) => Math.min(100, prev + 2))
+    playCatAction('sip')
   }
 
   function groomCat() {
-    setCleanliness((prev) => Math.min(100, prev + 10))
+    setCleanliness((prev) => Math.min(100, prev + 12))
     setIntimacy((prev) => Math.min(100, prev + 5))
+    playCatAction('happy')
+  }
+
+  function playWithCat() {
+    setIntimacy((prev) => Math.min(100, prev + 6))
+    setFullness((prev) => Math.max(0, prev - 3))
+    playCatAction('play', 1600)
+  }
+
+  function sleepCat() {
+    setFullness((prev) => Math.max(0, prev - 2))
+    playCatAction('sleep', 2600)
+  }
+
+  function petCat() {
+    setIntimacy((prev) => Math.min(100, prev + 2))
+    playCatAction('happy')
   }
 
   return (
@@ -162,7 +314,7 @@ function App() {
               ></div>
             </div>
 
-            <p>完成任务可以获得小鱼干，用来照顾小猫哦！</p>
+            <p>完成任务可以获得小鱼干，用来照顾你的小猫。</p>
           </div>
         </section>
 
@@ -187,22 +339,42 @@ function App() {
         </section>
 
         <section className="quick-actions">
-          <button className="action green">
+          <button className="action green" onClick={() => playCatAction('focus', 1800)}>
             <span>🎯</span>
             <b>开始专注</b>
-            <small>选择任务后开始</small>
+            <small>小猫陪你学习</small>
           </button>
 
           <button className="action yellow" onClick={groomCat}>
             <span>🪮</span>
             <b>梳毛</b>
-            <small>提高亲密度</small>
+            <small>清洁 + 亲密</small>
           </button>
 
           <button className="action pink" onClick={feedCat}>
             <span>🐟</span>
             <b>喂猫</b>
             <small>消耗 10 小鱼干</small>
+          </button>
+        </section>
+
+        <section className="quick-actions second-actions">
+          <button className="action purple" onClick={playWithCat}>
+            <span>🪶</span>
+            <b>逗猫</b>
+            <small>提高亲密度</small>
+          </button>
+
+          <button className="action blue" onClick={sleepCat}>
+            <span>🌙</span>
+            <b>睡觉</b>
+            <small>休息一下</small>
+          </button>
+
+          <button className="action cream" onClick={petCat}>
+            <span>🤍</span>
+            <b>摸摸</b>
+            <small>轻轻互动</small>
           </button>
         </section>
 
@@ -254,13 +426,13 @@ function App() {
             ))}
 
             <div className="small-tip">
-              💡 点击任务左侧圆圈 = 完成任务；点击任务文字 = 开始任务。
+              💡 点击左侧圆圈 = 完成任务；点击任务文字 = 开始任务。
             </div>
           </div>
 
           <div className="cat-status-card">
             <div className="card-title">
-              <h3>我的小猫</h3>
+              <h3>{catName || '小猫'} 的状态</h3>
               <p>Lv.6</p>
             </div>
 
@@ -296,35 +468,43 @@ function App() {
 
             <p className="cat-mood">
               {fullness >= 90
-                ? '小猫吃得饱饱的，正在开心打滚～ ✨'
-                : '小猫正在等你完成任务喂它小鱼干～'}
+                ? `${catName || '小猫'}吃得饱饱的，正在开心陪你～ ✨`
+                : `${catName || '小猫'}正在等你完成任务喂它小鱼干～`}
             </p>
           </div>
         </section>
 
-        <section className="cat-scene">
-          <div className="speech-bubble">
-            {completedTasks >= totalTasks && totalTasks > 0
-              ? '今天的任务都完成啦，主人好棒喵！'
-              : '今天也要陪你完成任务喵～'}
+        <section className="cat-editor-card">
+          <div className="card-title">
+            <h3>我的小猫</h3>
+            <p>专属形象</p>
           </div>
 
-          <div className="cat">
-            <div className="ear ear-left"></div>
-            <div className="ear ear-right"></div>
-
-            <div className="cat-face">
-              <div className="eye eye-left"></div>
-              <div className="eye eye-right"></div>
-              <div className="nose"></div>
-              <div className="mouth">ω</div>
-            </div>
-
-            <div className="cat-body"></div>
-            <div className="cat-tail"></div>
-            <div className="bell">🔔</div>
+          <div className="cat-editor-grid single-cat-editor">
+            <label>
+              <span>名字</span>
+              <input
+                value={catName}
+                onChange={(e) => {
+                  setCatName(e.target.value)
+                  playCatAction('happy')
+                }}
+                placeholder="给小猫起名字"
+              />
+            </label>
           </div>
         </section>
+
+        <MyCatAvatar
+          catName={catName || '小猫'}
+          action={catAction}
+          fullness={fullness}
+          cleanliness={cleanliness}
+          intimacy={intimacy}
+          completedTasks={completedTasks}
+          totalTasks={totalTasks}
+          onPet={petCat}
+        />
 
         <nav className="bottom-nav">
           <div className="active">🏠<span>首页</span></div>
