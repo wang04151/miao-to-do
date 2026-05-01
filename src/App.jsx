@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const defaultTasks = [
@@ -28,96 +28,157 @@ const defaultTasks = [
   },
 ]
 
-function MyCatAvatar({
+const actionTextMap = {
+  walk: '我正在房间里来回巡视，看看你有没有认真完成任务喵～',
+  idle: '我在这里等你，快来摸摸我吧～',
+  lie: '我现在躺着看电视，进入休息模式啦～',
+  happy: '被你摸摸之后超开心，尾巴都要摇起来啦！',
+  feed: '谢谢你喂我，小肚子变得饱饱的～',
+  groom: '梳毛真舒服，我现在香香软软的啦～',
+  play: '正在玩逗猫棒，精神满满！',
+  sleep: '有点困啦，先睡一小会儿……Zzz',
+  focus: '专注模式开启，我会陪你一起完成任务。',
+}
+
+const walkFrames = [
+  'cats/mycat-walk-1.png',
+  'cats/mycat-walk-2.png',
+  'cats/mycat-walk-3.png',
+  'cats/mycat-walk-4.png',
+]
+
+function CatCompanion({
   catName,
   action,
+  frame,
+  catX,
+  direction,
   fullness,
   cleanliness,
   intimacy,
   completedTasks,
   totalTasks,
   onPet,
+  onWalk,
+  onIdle,
+  onLie,
+  onSleep,
+  onPlay,
 }) {
-  const imageUrl = `${import.meta.env.BASE_URL}cats/mycat.png`
+  const baseUrl = import.meta.env.BASE_URL
+  const isLieMode = action === 'lie' || action === 'sleep'
+  const catImage = isLieMode
+    ? `${baseUrl}cats/mycat-lie-tv.png`
+    : `${baseUrl}${walkFrames[frame]}`
 
-  const actionText = {
-    idle: `我是 ${catName}，今天也会陪着你喵～`,
-    happy: `${catName} 很开心！尾巴都要摇起来啦～`,
-    sip: `${catName} 正在喝小鱼干奶茶，满足喵～`,
-    play: `${catName} 正在玩逗猫棒，超兴奋！`,
-    sleep: `${catName} 有点困了，正在软软睡觉～`,
-    focus: `${catName} 陪你一起专注学习中。`,
-  }
+  const moodText = useMemo(() => {
+    if (fullness < 40) return '有点饿'
+    if (cleanliness < 45) return '想梳毛'
+    if (completedTasks === totalTasks && totalTasks > 0) return '超开心'
+    if (intimacy >= 90) return '非常亲近你'
+    return '心情很好'
+  }, [fullness, cleanliness, intimacy, completedTasks, totalTasks])
 
-  const mood =
-    fullness >= 85 && intimacy >= 80
-      ? '心情很好'
-      : fullness < 50
-        ? '有点饿'
-        : cleanliness < 50
-          ? '想梳毛'
-          : '安静陪伴'
+  const sceneStatus =
+    action === 'walk'
+      ? '散步中'
+      : action === 'idle'
+        ? '待机中'
+        : action === 'lie'
+          ? '看电视'
+          : action === 'sleep'
+            ? '睡觉中'
+            : action === 'focus'
+              ? '专注中'
+              : '互动中'
 
   return (
-    <section className={`my-cat-scene ${action}`}>
-      <div className="cat-dialog">
-        <div className="cat-dialog-title">🐱 {catName}</div>
-        <p>{actionText[action] || actionText.idle}</p>
+    <section className={`live-cat-card ${action}`}>
+      <div className="cat-dialog-box">
+        <strong>🐱 {catName}</strong>
+        <p>{actionTextMap[action] || actionTextMap.walk}</p>
       </div>
 
-      <div className="cat-badges">
-        <span>状态：{mood}</span>
+      <div className="cat-status-tags">
+        <span>状态：{moodText}</span>
+        <span>动作：{sceneStatus}</span>
         <span>任务：{completedTasks}/{totalTasks}</span>
       </div>
 
-      <button className="cat-click-area" onClick={onPet} aria-label="摸摸猫咪">
-        <div className="cat-aura"></div>
+      <div className={`cat-room ${isLieMode ? 'room-lie' : 'room-walk'}`}>
+        <div className="room-light"></div>
+        <div className="room-floor"></div>
 
-        <img
-          className="my-cat-img"
-          src={imageUrl}
-          alt={`${catName} 的 3D 小猫形象`}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
+        {(action === 'lie' || action === 'sleep') && (
+          <div className="tv-area">
+            <div className="tv-screen">
+              <div className="tv-glow"></div>
+              <span>📺</span>
+            </div>
+            <div className="tv-base"></div>
+          </div>
+        )}
 
-        <div className="cat-shadow"></div>
-
-        <span className="cat-sparkle sparkle-a">✦</span>
-        <span className="cat-sparkle sparkle-b">✧</span>
-        <span className="cat-sparkle sparkle-c">✦</span>
+        {action === 'play' && (
+          <div className="cat-toy">
+            <span>🪶</span>
+          </div>
+        )}
 
         {action === 'sleep' && (
-          <div className="sleep-bubbles">
+          <div className="zzz">
             <span>Z</span>
             <span>z</span>
             <span>z</span>
           </div>
         )}
 
-        {action === 'play' && (
-          <div className="toy-stick">
-            <span>🪶</span>
-          </div>
+        {action === 'feed' && <div className="floating-note">+ 饱食度</div>}
+        {action === 'groom' && <div className="floating-note">+ 清洁度</div>}
+        {action === 'happy' && <div className="floating-note">+ 亲密度</div>}
+        {action === 'focus' && <div className="floating-note">专注中</div>}
+
+        {action === 'walk' && (
+          <>
+            <span className="paw-print paw-1">🐾</span>
+            <span className="paw-print paw-2">🐾</span>
+            <span className="paw-print paw-3">🐾</span>
+          </>
         )}
 
-        {action === 'focus' && (
-          <div className="focus-note">
-            <span>专注中</span>
-          </div>
-        )}
+        <button className="cat-hit-area" onClick={onPet} aria-label="摸摸猫咪">
+          <img
+            className={`real-cat-img ${isLieMode ? 'lie-img' : 'walk-img'}`}
+            src={catImage}
+            alt={`${catName} 的动态猫咪形象`}
+            draggable="false"
+            style={
+              isLieMode
+                ? undefined
+                : {
+                    left: `${catX}%`,
+                    transform: `translateX(-50%) scaleX(${direction})`,
+                  }
+            }
+          />
+        </button>
 
-        {action === 'sip' && (
-          <div className="sip-note">
-            <span>+ 饱食度</span>
-          </div>
-        )}
-      </button>
+        <div className="cat-floor-shadow"></div>
 
-      <div className="cat-mini-actions">
-        <span>点击猫咪可以摸摸它</span>
+        <span className="room-sparkle sparkle-one">✦</span>
+        <span className="room-sparkle sparkle-two">✧</span>
+        <span className="room-sparkle sparkle-three">✦</span>
       </div>
+
+      <div className="cat-control-row">
+        <button onClick={onWalk}>来回走动</button>
+        <button onClick={onIdle}>待机卖萌</button>
+        <button onClick={onLie}>躺着看电视</button>
+        <button onClick={onPlay}>逗猫</button>
+        <button onClick={onSleep}>睡觉</button>
+      </div>
+
+      <p className="cat-click-tip">点击猫咪可以摸摸它，动作会更灵动。</p>
     </section>
   )
 }
@@ -149,13 +210,16 @@ function App() {
   })
 
   const [catName, setCatName] = useState(() => {
-    const saved = localStorage.getItem('miao_cat_name')
-    return saved || '奶糖'
+    return localStorage.getItem('miao_cat_name') || '八嘎'
   })
 
-  const [catAction, setCatAction] = useState('idle')
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('30')
+
+  const [catAction, setCatAction] = useState('walk')
+  const [catFrame, setCatFrame] = useState(0)
+  const [catX, setCatX] = useState(16)
+  const [catDirection, setCatDirection] = useState(1)
 
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((task) => task.status === '已完成').length
@@ -185,13 +249,54 @@ function App() {
     localStorage.setItem('miao_cat_name', catName)
   }, [catName])
 
-  function playCatAction(actionName, duration = 1300) {
-    setCatAction(actionName)
+  useEffect(() => {
+    if (catAction !== 'walk') return
 
-    window.clearTimeout(window.__miaoTimer)
-    window.__miaoTimer = window.setTimeout(() => {
-      setCatAction('idle')
-    }, duration)
+    const timer = setInterval(() => {
+      setCatFrame((prev) => (prev + 1) % walkFrames.length)
+
+      setCatX((prev) => {
+        const next = prev + catDirection * 2.4
+
+        if (next >= 78) {
+          setCatDirection(-1)
+          return 78
+        }
+
+        if (next <= 16) {
+          setCatDirection(1)
+          return 16
+        }
+
+        return next
+      })
+    }, 180)
+
+    return () => clearInterval(timer)
+  }, [catAction, catDirection])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCatAction((prev) => {
+        if (prev === 'walk') return 'lie'
+        if (prev === 'lie') return 'walk'
+        return prev
+      })
+    }, 15000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  function playTemporaryAction(action, duration = 1600) {
+    setCatAction(action)
+
+    window.clearTimeout(window.__miaoActionTimer)
+
+    if (!['walk', 'idle', 'lie', 'sleep'].includes(action)) {
+      window.__miaoActionTimer = window.setTimeout(() => {
+        setCatAction('walk')
+      }, duration)
+    }
   }
 
   function addTask() {
@@ -215,7 +320,7 @@ function App() {
     setTasks([newTask, ...tasks])
     setNewTaskName('')
     setNewTaskTime('30')
-    playCatAction('happy')
+    playTemporaryAction('happy')
   }
 
   function completeTask(id) {
@@ -224,7 +329,7 @@ function App() {
         if (task.id === id && task.status !== '已完成') {
           setFish((prev) => prev + task.reward)
           setIntimacy((prev) => Math.min(100, prev + 4))
-          playCatAction('happy')
+          playTemporaryAction('happy')
 
           return {
             ...task,
@@ -246,7 +351,7 @@ function App() {
       )
     )
 
-    playCatAction('focus', 1800)
+    playTemporaryAction('focus', 2200)
   }
 
   function deleteTask(id) {
@@ -262,29 +367,24 @@ function App() {
     setFish((prev) => prev - 10)
     setFullness((prev) => Math.min(100, prev + 12))
     setIntimacy((prev) => Math.min(100, prev + 2))
-    playCatAction('sip')
+    playTemporaryAction('feed')
   }
 
   function groomCat() {
     setCleanliness((prev) => Math.min(100, prev + 12))
     setIntimacy((prev) => Math.min(100, prev + 5))
-    playCatAction('happy')
+    playTemporaryAction('groom')
+  }
+
+  function petCat() {
+    setIntimacy((prev) => Math.min(100, prev + 2))
+    playTemporaryAction('happy')
   }
 
   function playWithCat() {
     setIntimacy((prev) => Math.min(100, prev + 6))
     setFullness((prev) => Math.max(0, prev - 3))
-    playCatAction('play', 1600)
-  }
-
-  function sleepCat() {
-    setFullness((prev) => Math.max(0, prev - 2))
-    playCatAction('sleep', 2600)
-  }
-
-  function petCat() {
-    setIntimacy((prev) => Math.min(100, prev + 2))
-    playCatAction('happy')
+    playTemporaryAction('play', 2200)
   }
 
   return (
@@ -308,10 +408,7 @@ function App() {
             </h2>
 
             <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${progress}%` }}
-              ></div>
+              <div className="progress-fill" style={{ width: `${progress}%` }}></div>
             </div>
 
             <p>完成任务可以获得小鱼干，用来照顾你的小猫。</p>
@@ -339,7 +436,7 @@ function App() {
         </section>
 
         <section className="quick-actions">
-          <button className="action green" onClick={() => playCatAction('focus', 1800)}>
+          <button className="action green" onClick={() => playTemporaryAction('focus', 2200)}>
             <span>🎯</span>
             <b>开始专注</b>
             <small>小猫陪你学习</small>
@@ -365,7 +462,7 @@ function App() {
             <small>提高亲密度</small>
           </button>
 
-          <button className="action blue" onClick={sleepCat}>
+          <button className="action blue" onClick={() => setCatAction('sleep')}>
             <span>🌙</span>
             <b>睡觉</b>
             <small>休息一下</small>
@@ -426,7 +523,7 @@ function App() {
             ))}
 
             <div className="small-tip">
-              💡 点击左侧圆圈 = 完成任务；点击任务文字 = 开始任务。
+              💡 点击任务左侧圆圈 = 完成任务；点击任务文字 = 开始任务。
             </div>
           </div>
 
@@ -487,7 +584,7 @@ function App() {
                 value={catName}
                 onChange={(e) => {
                   setCatName(e.target.value)
-                  playCatAction('happy')
+                  playTemporaryAction('happy')
                 }}
                 placeholder="给小猫起名字"
               />
@@ -495,15 +592,23 @@ function App() {
           </div>
         </section>
 
-        <MyCatAvatar
+        <CatCompanion
           catName={catName || '小猫'}
           action={catAction}
+          frame={catFrame}
+          catX={catX}
+          direction={catDirection}
           fullness={fullness}
           cleanliness={cleanliness}
           intimacy={intimacy}
           completedTasks={completedTasks}
           totalTasks={totalTasks}
           onPet={petCat}
+          onWalk={() => setCatAction('walk')}
+          onIdle={() => setCatAction('idle')}
+          onLie={() => setCatAction('lie')}
+          onSleep={() => setCatAction('sleep')}
+          onPlay={playWithCat}
         />
 
         <nav className="bottom-nav">
