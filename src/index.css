@@ -1151,3 +1151,307 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+/* ========= 小猫自然行为 2.0：随机停顿 / 转身停顿 / 更自然步伐 ========= */
+
+.cat-walker {
+  position: absolute;
+  z-index: 6;
+  will-change: left, transform;
+  transition: left 0.1s linear, transform 0.1s linear;
+}
+
+.walk-wrap {
+  bottom: 38px;
+}
+
+.lie-wrap {
+  left: 50%;
+  bottom: 35px;
+  transform: translateX(-50%);
+}
+
+.cat-walker .real-cat-img {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  background: transparent !important;
+  filter: drop-shadow(0 18px 20px rgba(97, 63, 37, 0.18));
+}
+
+.walk-img {
+  width: 175px;
+  transform-origin: center bottom;
+}
+
+.lie-img {
+  width: 300px;
+  transform-origin: center center;
+  animation: catLieWatchTvV2 3s ease-in-out infinite;
+}
+
+.live-cat-card.walk .walk-wrap:not(.paused):not(.turning) .walk-img {
+  animation: catNaturalStepV2 0.48s cubic-bezier(0.55, 0.05, 0.45, 0.95) infinite;
+}
+
+.walk-wrap.paused .walk-img {
+  animation: catPauseLookAround 1.2s ease-in-out infinite;
+}
+
+.walk-wrap.turning .walk-img {
+  animation: catSoftTurn 0.42s ease-in-out;
+}
+
+.live-cat-card.idle .walk-wrap {
+  left: 50% !important;
+  transform: translateX(-50%) scaleX(1) !important;
+}
+
+.live-cat-card.idle .walk-img {
+  animation: catIdleLookAround 3.2s ease-in-out infinite;
+}
+
+.live-cat-card.happy .walk-img,
+.live-cat-card.groom .walk-img {
+  animation: catHappyV2 1s ease-in-out;
+}
+
+.live-cat-card.feed .walk-img {
+  animation: catFeedV2 1.15s ease-in-out;
+}
+
+.live-cat-card.play .walk-img {
+  animation: catPlayV2 0.72s ease-in-out infinite alternate;
+}
+
+.live-cat-card.focus .walk-img {
+  animation: catFocusV2 1.4s ease-in-out infinite;
+}
+
+.live-cat-card.sleep .lie-img {
+  animation: catSleepV2 3.4s ease-in-out infinite;
+}
+
+.live-cat-card.lie .lie-img {
+  animation: catLieWatchTvV2 3s ease-in-out infinite;
+}
+
+@keyframes catNaturalStepV2 {
+  0% {
+    transform: translateY(0) rotate(0deg) scaleX(1) scaleY(1);
+  }
+
+  12% {
+    transform: translateY(-3px) rotate(-0.5deg) scaleX(1.006) scaleY(0.998);
+  }
+
+  28% {
+    transform: translateY(-8px) rotate(-1deg) scaleX(1.012) scaleY(1.006);
+  }
+
+  42% {
+    transform: translateY(-5px) rotate(-0.3deg) scaleX(0.996) scaleY(1.004);
+  }
+
+  56% {
+    transform: translateY(-9px) rotate(0.8deg) scaleX(1.014) scaleY(1.008);
+  }
+
+  74% {
+    transform: translateY(-4px) rotate(0.4deg) scaleX(1.004) scaleY(1.002);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes catPauseLookAround {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  25% {
+    transform: translateY(-2px) rotate(-1deg) scale(1.005);
+  }
+
+  55% {
+    transform: translateY(-1px) rotate(1.2deg) scale(1.005);
+  }
+
+  80% {
+    transform: translateY(-2px) rotate(-0.4deg) scale(1.002);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catIdleLookAround {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  22% {
+    transform: translateY(-4px) rotate(-0.8deg) scale(1.01);
+  }
+
+  48% {
+    transform: translateY(-7px) rotate(0.4deg) scale(1.018);
+  }
+
+  72% {
+    transform: translateY(-3px) rotate(1deg) scale(1.008);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catSoftTurn {
+  0% {
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+
+  45% {
+    transform: translateY(3px) scaleX(0.96) scaleY(0.985);
+  }
+
+  75% {
+    transform: translateY(-3px) scaleX(1.02) scaleY(1.01);
+  }
+
+  100% {
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes catHappyV2 {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  18% {
+    transform: translateY(-16px) rotate(-1.2deg) scale(1.04);
+  }
+
+  38% {
+    transform: translateY(1px) rotate(0.8deg) scale(0.985);
+  }
+
+  62% {
+    transform: translateY(-10px) rotate(1deg) scale(1.025);
+  }
+
+  82% {
+    transform: translateY(-2px) rotate(-0.4deg) scale(1.005);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catFeedV2 {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  20% {
+    transform: translateY(-2px) rotate(-1.6deg) scale(1.015);
+  }
+
+  42% {
+    transform: translateY(2px) rotate(1.2deg) scale(0.995);
+  }
+
+  64% {
+    transform: translateY(-3px) rotate(-0.8deg) scale(1.01);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catPlayV2 {
+  0% {
+    transform: translateY(0) rotate(-2deg) scale(1.02);
+  }
+
+  45% {
+    transform: translateY(-16px) rotate(2deg) scale(1.055);
+  }
+
+  100% {
+    transform: translateY(-6px) rotate(-1deg) scale(1.03);
+  }
+}
+
+@keyframes catFocusV2 {
+  0% {
+    transform: translateY(-2px) rotate(0deg) scale(1);
+  }
+
+  35% {
+    transform: translateY(-6px) rotate(-0.8deg) scale(1.01);
+  }
+
+  70% {
+    transform: translateY(-5px) rotate(0.8deg) scale(1.01);
+  }
+
+  100% {
+    transform: translateY(-2px) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catLieWatchTvV2 {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  40% {
+    transform: translateY(-3px) rotate(0.3deg) scale(1.015);
+  }
+
+  75% {
+    transform: translateY(-1px) rotate(-0.2deg) scale(1.008);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes catSleepV2 {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.95;
+  }
+
+  50% {
+    transform: translateY(4px) scale(0.992);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.95;
+  }
+}
+
+@media (max-width: 540px) {
+  .walk-img {
+    width: 152px;
+  }
+
+  .lie-img {
+    width: 255px;
+  }
+}

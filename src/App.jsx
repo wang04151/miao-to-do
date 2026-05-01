@@ -75,6 +75,8 @@ function CatCompanion({
   frame,
   catX,
   direction,
+  isTurning,
+  isPaused,
   fullness,
   cleanliness,
   intimacy,
@@ -115,6 +117,18 @@ function CatCompanion({
               : action === 'remind'
                 ? '提醒中'
                 : '互动中'
+
+  const walkerStyle = isLieMode
+    ? undefined
+    : action === 'walk'
+      ? {
+          left: `${catX}%`,
+          transform: `translateX(-50%) scaleX(${direction})`,
+        }
+      : {
+          left: '50%',
+          transform: 'translateX(-50%) scaleX(1)',
+        }
 
   return (
     <section className={`live-cat-card ${action}`}>
@@ -172,20 +186,19 @@ function CatCompanion({
         )}
 
         <button className="cat-hit-area" onClick={onPet} aria-label="摸摸猫咪">
-          <img
-            className={`real-cat-img ${isLieMode ? 'lie-img' : 'walk-img'}`}
-            src={catImage}
-            alt={`${catName} 的动态猫咪形象`}
-            draggable="false"
-            style={
-              isLieMode
-                ? undefined
-                : {
-                    left: `${catX}%`,
-                    transform: `translateX(-50%) scaleX(${direction})`,
-                  }
-            }
-          />
+          <div
+            className={`cat-walker ${isLieMode ? 'lie-wrap' : 'walk-wrap'} ${
+              isTurning ? 'turning' : ''
+            } ${isPaused ? 'paused' : ''}`}
+            style={walkerStyle}
+          >
+            <img
+              className={`real-cat-img ${isLieMode ? 'lie-img' : 'walk-img'}`}
+              src={catImage}
+              alt={`${catName} 的动态猫咪形象`}
+              draggable="false"
+            />
+          </div>
         </button>
 
         <div className="cat-floor-shadow"></div>
@@ -246,6 +259,9 @@ function App() {
   const [catFrame, setCatFrame] = useState(0)
   const [catX, setCatX] = useState(16)
   const [catDirection, setCatDirection] = useState(1)
+  const [isTurning, setIsTurning] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [catSpeed, setCatSpeed] = useState(1.35)
 
   const [notificationStatus, setNotificationStatus] = useState(() => {
     if (!('Notification' in window)) return 'unsupported'
@@ -280,42 +296,112 @@ function App() {
     localStorage.setItem('miao_cat_name', catName)
   }, [catName])
 
+  function pauseCatNaturally() {
+    setIsPaused(true)
+    window.clearTimeout(window.__miaoPauseTimer)
+
+    window.__miaoPauseTimer = window.setTimeout(() => {
+      setIsPaused(false)
+    }, 500 + Math.random() * 700)
+  }
+
+  function turnCatNaturally() {
+    setIsPaused(true)
+    setIsTurning(true)
+
+    window.clearTimeout(window.__miaoTurnTimer)
+    window.clearTimeout(window.__miaoResumeTimer)
+
+    window.__miaoTurnTimer = window.setTimeout(() => {
+      setCatDirection((prev) => prev * -1)
+      setCatFrame(0)
+      setCatSpeed(1.05 + Math.random() * 1.0)
+
+      window.__miaoResumeTimer = window.setTimeout(() => {
+        setIsTurning(false)
+        setIsPaused(false)
+      }, 180)
+    }, 360)
+  }
+
   useEffect(() => {
-    if (catAction !== 'walk') return
+    if (catAction !== 'walk' || isPaused) return
 
-    const timer = setInterval(() => {
+    const frameTimer = window.setInterval(() => {
       setCatFrame((prev) => (prev + 1) % walkFrames.length)
+    }, 115)
 
+    return () => window.clearInterval(frameTimer)
+  }, [catAction, isPaused])
+
+  useEffect(() => {
+    if (catAction !== 'walk' || isPaused) return
+
+    const moveTimer = window.setInterval(() => {
       setCatX((prev) => {
-        const next = prev + catDirection * 2.4
+        const next = prev + catDirection * catSpeed
+        const randomPause = Math.random() < 0.035
 
-        if (next >= 78) {
-          setCatDirection(-1)
-          return 78
+        if (randomPause) {
+          pauseCatNaturally()
+          return prev
         }
 
-        if (next <= 16) {
-          setCatDirection(1)
-          return 16
+        if (next >= 78 || next <= 16) {
+          turnCatNaturally()
+          return Math.max(16, Math.min(78, next))
         }
 
         return next
       })
-    }, 180)
+    }, 85)
 
-    return () => clearInterval(timer)
-  }, [catAction, catDirection])
+    return () => window.clearInterval(moveTimer)
+  }, [catAction, isPaused, catDirection, catSpeed])
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       setCatAction((prev) => {
-        if (prev === 'walk') return 'lie'
-        if (prev === 'lie') return 'walk'
-        return prev
-      })
-    }, 15000)
+        if (['happy', 'feed', 'groom', 'play', 'focus', 'remind'].includes(prev)) {
+          return prev
+        }
 
-    return () => clearInterval(timer)
+        const random = Math.random()
+
+        if (prev === 'walk') {
+          if (random < 0.45) return 'idle'
+          if (random < 0.72) return 'lie'
+          if (random < 0.86) return 'sleep'
+          return 'walk'
+        }
+
+        if (prev === 'idle') {
+          if (random < 0.55) return 'walk'
+          if (random < 0.75) return 'lie'
+          if (random < 0.9) return 'sleep'
+          return 'idle'
+        }
+
+        if (prev === 'lie') {
+          if (random < 0.45) return 'walk'
+          if (random < 0.7) return 'idle'
+          if (random < 0.88) return 'sleep'
+          return 'lie'
+        }
+
+        if (prev === 'sleep') {
+          if (random < 0.5) return 'lie'
+          if (random < 0.8) return 'idle'
+          return 'walk'
+        }
+
+        return 'walk'
+      })
+
+      setCatSpeed(1.05 + Math.random() * 1.0)
+    }, 11000)
+
+    return () => window.clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -389,12 +475,16 @@ function App() {
 
   function playTemporaryAction(action, duration = 1600) {
     setCatAction(action)
+    setIsPaused(false)
+    setIsTurning(false)
 
     window.clearTimeout(window.__miaoActionTimer)
 
     if (!['walk', 'idle', 'lie', 'sleep'].includes(action)) {
       window.__miaoActionTimer = window.setTimeout(() => {
-        setCatAction('walk')
+        const nextActions = ['walk', 'idle', 'lie']
+        const next = nextActions[Math.floor(Math.random() * nextActions.length)]
+        setCatAction(next)
       }, duration)
     }
   }
@@ -733,6 +823,8 @@ function App() {
           frame={catFrame}
           catX={catX}
           direction={catDirection}
+          isTurning={isTurning}
+          isPaused={isPaused}
           fullness={fullness}
           cleanliness={cleanliness}
           intimacy={intimacy}
