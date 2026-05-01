@@ -9,6 +9,8 @@ const defaultTasks = [
     reward: 20,
     status: '已完成',
     icon: '📗',
+    reminderAt: '',
+    reminded: false,
   },
   {
     id: 2,
@@ -17,6 +19,8 @@ const defaultTasks = [
     reward: 30,
     status: '进行中',
     icon: '📄',
+    reminderAt: '',
+    reminded: false,
   },
   {
     id: 3,
@@ -25,6 +29,8 @@ const defaultTasks = [
     reward: 15,
     status: '待开始',
     icon: '👟',
+    reminderAt: '',
+    reminded: false,
   },
 ]
 
@@ -38,6 +44,7 @@ const actionTextMap = {
   play: '正在玩逗猫棒，精神满满！',
   sleep: '有点困啦，先睡一小会儿……Zzz',
   focus: '专注模式开启，我会陪你一起完成任务。',
+  remind: '提醒时间到啦！该开始任务了，我会监督你喵～',
 }
 
 const walkFrames = [
@@ -46,6 +53,21 @@ const walkFrames = [
   'cats/mycat-walk-3.png',
   'cats/mycat-walk-4.png',
 ]
+
+function formatReminderTime(value) {
+  if (!value) return ''
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return ''
+
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+
+  return `${month}/${day} ${hour}:${minute}`
+}
 
 function CatCompanion({
   catName,
@@ -90,7 +112,9 @@ function CatCompanion({
             ? '睡觉中'
             : action === 'focus'
               ? '专注中'
-              : '互动中'
+              : action === 'remind'
+                ? '提醒中'
+                : '互动中'
 
   return (
     <section className={`live-cat-card ${action}`}>
@@ -137,6 +161,7 @@ function CatCompanion({
         {action === 'groom' && <div className="floating-note">+ 清洁度</div>}
         {action === 'happy' && <div className="floating-note">+ 亲密度</div>}
         {action === 'focus' && <div className="floating-note">专注中</div>}
+        {action === 'remind' && <div className="floating-note">该开始啦</div>}
 
         {action === 'walk' && (
           <>
@@ -215,11 +240,17 @@ function App() {
 
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('30')
+  const [newTaskReminder, setNewTaskReminder] = useState('')
 
   const [catAction, setCatAction] = useState('walk')
   const [catFrame, setCatFrame] = useState(0)
   const [catX, setCatX] = useState(16)
   const [catDirection, setCatDirection] = useState(1)
+
+  const [notificationStatus, setNotificationStatus] = useState(() => {
+    if (!('Notification' in window)) return 'unsupported'
+    return Notification.permission
+  })
 
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((task) => task.status === '已完成').length
@@ -287,6 +318,75 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now()
+
+      const dueTasks = tasks.filter((task) => {
+        if (!task.reminderAt) return false
+        if (task.reminded) return false
+        if (task.status === '已完成') return false
+
+        const reminderTime = new Date(task.reminderAt).getTime()
+        return !Number.isNaN(reminderTime) && now >= reminderTime
+      })
+
+      if (dueTasks.length === 0) return
+
+      dueTasks.forEach((task) => {
+        sendTaskNotification(task)
+      })
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          dueTasks.some((due) => due.id === task.id)
+            ? {
+                ...task,
+                reminded: true,
+                status: task.status === '待开始' ? '进行中' : task.status,
+              }
+            : task
+        )
+      )
+
+      playTemporaryAction('remind', 2600)
+    }, 10000)
+
+    return () => clearInterval(timer)
+  }, [tasks])
+
+  function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      alert('你的浏览器不支持系统提醒。')
+      setNotificationStatus('unsupported')
+      return
+    }
+
+    Notification.requestPermission().then((permission) => {
+      setNotificationStatus(permission)
+
+      if (permission === 'granted') {
+        alert('提醒权限已开启！到时间后会弹出任务提醒。')
+      } else {
+        alert('你没有允许提醒权限，之后只能在页面内看到提醒。')
+      }
+    })
+  }
+
+  function sendTaskNotification(task) {
+    const title = '喵待办提醒 🐱'
+    const body = `该开始做：${task.name}｜预计 ${task.time}`
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: `${import.meta.env.BASE_URL}cats/mycat-walk-1.png`,
+      })
+    } else {
+      alert(`${title}\n${body}`)
+    }
+  }
+
   function playTemporaryAction(action, duration = 1600) {
     setCatAction(action)
 
@@ -315,11 +415,14 @@ function App() {
       reward,
       status: '待开始',
       icon: '📝',
+      reminderAt: newTaskReminder,
+      reminded: false,
     }
 
     setTasks([newTask, ...tasks])
     setNewTaskName('')
     setNewTaskTime('30')
+    setNewTaskReminder('')
     playTemporaryAction('happy')
   }
 
@@ -415,7 +518,25 @@ function App() {
           </div>
         </section>
 
-        <section className="add-panel">
+        <section className="reminder-card">
+          <div>
+            <h3>提醒功能</h3>
+            <p>
+              状态：
+              {notificationStatus === 'granted'
+                ? '已开启'
+                : notificationStatus === 'denied'
+                  ? '已拒绝'
+                  : notificationStatus === 'unsupported'
+                    ? '浏览器不支持'
+                    : '未开启'}
+            </p>
+          </div>
+
+          <button onClick={requestNotificationPermission}>开启提醒权限</button>
+        </section>
+
+        <section className="add-panel reminder-add-panel">
           <input
             value={newTaskName}
             onChange={(e) => setNewTaskName(e.target.value)}
@@ -431,6 +552,13 @@ function App() {
             <option value="45">45分钟</option>
             <option value="60">60分钟</option>
           </select>
+
+          <input
+            type="datetime-local"
+            value={newTaskReminder}
+            onChange={(e) => setNewTaskReminder(e.target.value)}
+            title="选择提醒时间"
+          />
 
           <button onClick={addTask}>添加任务</button>
         </section>
@@ -502,6 +630,13 @@ function App() {
                   <small>
                     {task.time} · 🐟 +{task.reward}
                   </small>
+
+                  {task.reminderAt && (
+                    <small className={task.reminded ? 'reminder-text reminded' : 'reminder-text'}>
+                      ⏰ {formatReminderTime(task.reminderAt)}
+                      {task.reminded ? ' · 已提醒' : ''}
+                    </small>
+                  )}
                 </div>
 
                 <div
@@ -523,7 +658,7 @@ function App() {
             ))}
 
             <div className="small-tip">
-              💡 点击任务左侧圆圈 = 完成任务；点击任务文字 = 开始任务。
+              💡 选择提醒时间后，到点会弹出提醒；点击任务文字 = 开始任务。
             </div>
           </div>
 
